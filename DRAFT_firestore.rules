@@ -1,0 +1,117 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    
+    // Global Safety Net (Strictly Default-Deny)
+    match /{document=**} {
+      allow read, write: if false;
+    }
+    
+    // Common global primitives
+    function isValidId(id) {
+      return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+    
+    function incoming() {
+      return request.resource.data;
+    }
+    
+    function existing() {
+      return resource.data;
+    }
+    
+    function isSignedIn() {
+      return request.auth != null;
+    }
+    
+    function isEmailVerified() {
+      return request.auth.token.email_verified == true;
+    }
+    
+    // Look up roles using a trusted database check instead of relying on client-side claims
+    function isAdmin() {
+      return isSignedIn() && (
+        exists(/databases/$(database)/documents/admins/$(request.auth.uid)) ||
+        request.auth.token.email == "faresstar1985@gmail.com"
+      );
+    }
+    
+    // Validation blueprint helper for Reciters (Anti-Update-Gap)
+    function isValidReciter(data) {
+      return data.keys().hasAll(['name', 'photoUrl', 'bio', 'surahCount']) 
+          && data.keys().size() >= 4
+          && data.name is string && data.name.size() > 0 && data.name.size() <= 100
+          && data.photoUrl is string && data.photoUrl.size() > 0 && data.photoUrl.size() <= 1000
+          && data.bio is string && data.bio.size() <= 5000
+          && data.surahCount is number && data.surahCount >= 0 && data.surahCount <= 114;
+    }
+    
+    // Validation blueprint helper for Surahs (Anti-Update-Gap)
+    function isValidSurah(data) {
+      return data.keys().hasAll(['number', 'name', 'audioUrl', 'duration'])
+          && data.keys().size() >= 4
+          && data.number is number && data.number >= 1 && data.number <= 114
+          && data.name is string && data.name.size() > 0 && data.name.size() <= 100
+          && data.audioUrl is string && data.audioUrl.size() > 0 && data.audioUrl.size() <= 1000
+          && data.duration is number && data.duration >= 0 && data.duration <= 7200;
+    }
+    
+    // Validation blueprint helper for Favorites (Anti-Update-Gap)
+    function isValidFavorite(data) {
+      return data.keys().hasAll(['type', 'reciterId', 'name'])
+          && data.keys().size() >= 3
+          && data.type is string && (data.type == 'reciter' || data.type == 'surah')
+          && data.reciterId is string && data.reciterId.size() <= 128
+          && data.name is string && data.name.size() > 0 && data.name.size() <= 150;
+    }
+    
+    // Validation blueprint helper for Admins (Anti-Update-Gap)
+    function isValidAdmin(data) {
+      return data.keys().hasAll(['email'])
+          && data.keys().size() >= 1
+          && data.email is string && data.email.size() <= 200;
+    }
+
+    // Reciters Collection matching logic
+    match /reciters/{reciterId} {
+      allow read: if true;
+      allow create: if (isAdmin() && isValidId(reciterId) && isValidReciter(incoming()) 
+                        && incoming().createdAt == request.time);
+      allow update: if (isAdmin() && isValidId(reciterId) && isValidReciter(incoming())
+                        && incoming().updatedAt == request.time
+                        && incoming().createdAt == existing().createdAt);
+      allow delete: if isAdmin() && isValidId(reciterId);
+
+      // Nested subcollection representing available surahs for each reciter
+      match /surahs/{surahId} {
+        allow read: if true;
+        allow create: if (isAdmin() && isValidId(surahId) && isValidSurah(incoming())
+                          && exists(/databases/$(database)/documents/reciters/$(reciterId))
+                          && incoming().createdAt == request.time);
+        allow update: if (isAdmin() && isValidId(surahId) && isValidSurah(incoming())
+                          && incoming().updatedAt == request.time
+                          && incoming().createdAt == existing().createdAt);
+        allow delete: if isAdmin() && isValidId(surahId);
+      }
+    }
+    
+    // User favorites collection matching logic (Strict Identity Isolation & Verification)
+    match /users/{userId}/favorites/{favoriteId} {
+      allow read: if (isSignedIn() && userId == request.auth.uid);
+      allow create: if (isSignedIn() && userId == request.auth.uid && isValidId(favoriteId) 
+                        && isValidFavorite(incoming()) && incoming().createdAt == request.time);
+      allow update: if (isSignedIn() && userId == request.auth.uid && isValidId(favoriteId)
+                        && isValidFavorite(incoming())
+                        && incoming().type == existing().type
+                        && incoming().reciterId == existing().reciterId
+                        && incoming().createdAt == existing().createdAt);
+      allow delete: if (isSignedIn() && userId == request.auth.uid && isValidId(favoriteId));
+    }
+    
+    // Admins listing
+    match /admins/{adminId} {
+      allow read: if isSignedIn();
+      allow create, update, delete: if (isAdmin() && isValidId(adminId) && isValidAdmin(incoming()));
+    }
+  }
+}

@@ -1,0 +1,6 @@
+{
+  "name": "Quran Audio App",
+  "description": "A beautiful Android Quran audio streaming application with a responsive mobile interface, reciters profiles, offline downloading simulation, dark/light mode, and an admin panel.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

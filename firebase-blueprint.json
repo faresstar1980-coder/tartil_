@@ -1,0 +1,141 @@
+{
+  "entities": {
+    "reciter": {
+      "title": "Reciter",
+      "description": "A Quran reciter profile containing biographical information and details.",
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string",
+          "description": "Name of the reciter in Arabic"
+        },
+        "photoUrl": {
+          "type": "string",
+          "description": "Profile picture URL"
+        },
+        "bio": {
+          "type": "string",
+          "description": "Biography in Arabic"
+        },
+        "surahCount": {
+          "type": "number",
+          "description": "Number of available surahs"
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Creation timestamp"
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Last update timestamp"
+        }
+      },
+      "required": ["name", "photoUrl", "bio", "surahCount"]
+    },
+    "surah": {
+      "title": "Surah",
+      "description": "An audio surah file linked to a specific reciter.",
+      "type": "object",
+      "properties": {
+        "number": {
+          "type": "number",
+          "description": "Surah number (1 to 114)"
+        },
+        "name": {
+          "type": "string",
+          "description": "Arabic Arabic name of the Surah"
+        },
+        "audioUrl": {
+          "type": "string",
+          "description": "High quality audio download and stream URL"
+        },
+        "duration": {
+          "type": "number",
+          "description": "Duration in seconds"
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Creation timestamp"
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Last update timestamp"
+        }
+      },
+      "required": ["number", "name", "audioUrl", "duration"]
+    },
+    "favorite": {
+      "title": "Favorite",
+      "description": "A saved favorite items list for the user.",
+      "type": "object",
+      "properties": {
+        "type": {
+          "type": "string",
+          "enum": ["reciter", "surah"],
+          "description": "Favorite item type"
+        },
+        "reciterId": {
+          "type": "string",
+          "description": "Associated reciter ID"
+        },
+        "surahId": {
+          "type": "string",
+          "description": "Associated surah ID if type is surah"
+        },
+        "name": {
+          "type": "string",
+          "description": "Display name of favorited item"
+        },
+        "reciterName": {
+          "type": "string",
+          "description": "Name of the reciter"
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Saved date timestamp"
+        }
+      },
+      "required": ["type", "reciterId", "name"]
+    },
+    "admin": {
+      "title": "Admin",
+      "description": "Authorized administrator details for managing content.",
+      "type": "object",
+      "properties": {
+        "email": {
+          "type": "string",
+          "description": "Admin user email"
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Admin provisioned timestamp"
+        }
+      },
+      "required": ["email"]
+    }
+  },
+  "firestore": {
+    "reciters": {
+      "schema": "reciter",
+      "description": "Database of Quran reciters."
+    },
+    "reciters/{reciterId}/surahs": {
+      "schema": "surah",
+      "description": "Surah audio recordings listing for the reciter."
+    },
+    "users/{userId}/favorites": {
+      "schema": "favorite",
+      "description": "User specific favorites data storage."
+    },
+    "admins": {
+      "schema": "admin",
+      "description": "List of administrative users"
+    }
+  }
+}
